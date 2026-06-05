@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import type { Page, ContentBrief, RewriteTask } from '../types';
 import { ShieldAlert, Save, CheckCircle, Clipboard } from 'lucide-react';
 import '../components/Gauges.css';
+import { apiClient } from '../apiClient';
 
 interface ContentEditorProps {
   pageId?: string;
@@ -30,8 +31,7 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({ pageId }) => {
 
   const fetchPagesList = async () => {
     try {
-      const response = await fetch('/api/pages');
-      const json = await response.json();
+      const json = await apiClient.getPages();
       setPages(json);
       if (json.length > 0) {
         const initialId = pageId || json[0].id;
@@ -44,8 +44,7 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({ pageId }) => {
 
   const fetchPageDetails = async (id: string) => {
     try {
-      const response = await fetch(`/api/pages/${id}`);
-      const json = await response.json();
+      const json = await apiClient.getPageDetails(id);
       setPage(json.page);
       setBrief(json.brief);
       setTask(json.task);
@@ -79,14 +78,10 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({ pageId }) => {
     if (!page) return;
     setSaving(true);
     try {
-      await fetch(`/api/rewrites/${page.id}/draft`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          draft_content: content,
-          status: 'Draft',
-          rollback_notes: rollbackNotes
-        })
+      await apiClient.saveDraft(page.id, {
+        draft_content: content,
+        status: 'Draft',
+        rollback_notes: rollbackNotes
       });
       showToast("Draft successfully saved locally!");
     } catch (err) {
@@ -105,17 +100,12 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({ pageId }) => {
     }
     setPublishing(true);
     try {
-      const response = await fetch('/api/wordpress/push', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          pageId: page.id,
-          draftContent: content,
-          title: titleProposal,
-          metaDescription: metaProposal
-        })
-      });
-      const json = await response.json();
+      const json = await apiClient.pushToWordPress(
+        page.id,
+        content,
+        titleProposal,
+        metaProposal
+      );
       if (json.success) {
         showToast(`Draft pushed to WordPress as Draft ID: wp_${json.wp_post_id}!`);
         // Refresh local details to update task status tag

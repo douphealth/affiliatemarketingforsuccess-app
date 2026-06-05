@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { Integration } from '../types';
 import { Link, Settings } from 'lucide-react';
+import { apiClient } from '../apiClient';
 
 export const Integrations: React.FC = () => {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
@@ -13,8 +14,7 @@ export const Integrations: React.FC = () => {
 
   const fetchIntegrations = async () => {
     try {
-      const response = await fetch('/api/integrations');
-      const json = await response.json();
+      const json = await apiClient.getIntegrations();
       setIntegrations(json);
       
       const wp = json.find((i: any) => i.id === 'int_wp');
@@ -40,15 +40,11 @@ export const Integrations: React.FC = () => {
     if (!wpUser || !wpPass) return;
     
     try {
-      await fetch('/api/integrations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: 'int_wp',
-          status: 'Connected',
-          credentials_encrypted: JSON.stringify({ url: wpUrl, username: wpUser })
-        })
-      });
+      await apiClient.updateIntegration(
+        'int_wp',
+        'Connected',
+        JSON.stringify({ url: wpUrl, username: wpUser })
+      );
       fetchIntegrations();
     } catch (err) {
       console.error(err);
@@ -57,15 +53,7 @@ export const Integrations: React.FC = () => {
 
   const handleDisconnect = async (id: string) => {
     try {
-      await fetch('/api/integrations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id,
-          status: 'Disconnected',
-          credentials_encrypted: null
-        })
-      });
+      await apiClient.updateIntegration(id, 'Disconnected', null);
       fetchIntegrations();
     } catch (err) {
       console.error(err);
@@ -74,15 +62,11 @@ export const Integrations: React.FC = () => {
 
   const handleQuickConnect = async (id: string) => {
     try {
-      await fetch('/api/integrations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id,
-          status: 'Connected',
-          credentials_encrypted: JSON.stringify({ key: `mock_active_key_${id}` })
-        })
-      });
+      await apiClient.updateIntegration(
+        id,
+        'Connected',
+        JSON.stringify({ key: `mock_active_key_${id}` })
+      );
       fetchIntegrations();
     } catch (err) {
       console.error(err);

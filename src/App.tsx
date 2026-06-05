@@ -25,6 +25,7 @@ import {
   BookOpen
 } from 'lucide-react';
 import './index.css';
+import { apiClient } from './apiClient';
 
 export const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<string>('dashboard');
@@ -43,12 +44,11 @@ export const App: React.FC = () => {
 
   const checkConnectedSite = async () => {
     try {
-      const response = await fetch('/api/dashboard');
-      const json = await response.json();
+      const json = await apiClient.getDashboard();
       if (json.site_connected) {
         setSiteConnected(true);
-        setSiteUrl(json.url);
-        setSiteName(json.name);
+        setSiteUrl(json.url || '');
+        setSiteName(json.name || '');
       } else {
         setSiteConnected(false);
       }
@@ -74,15 +74,7 @@ export const App: React.FC = () => {
     }
 
     try {
-      const response = await fetch('/api/crawl', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          url: targetUrl,
-          simulate: scanMethod === 'simulate'
-        })
-      });
-      await response.json();
+      await apiClient.triggerCrawl(targetUrl, scanMethod === 'simulate');
       
       // Wait briefly to simulate progress
       setTimeout(async () => {

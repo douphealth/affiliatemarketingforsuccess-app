@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { InternalLinkSuggestion } from '../types';
 import { Link2, Check, X, Clipboard } from 'lucide-react';
+import { apiClient } from '../apiClient';
 
 interface InternalLinkBuilderProps {
   onNavigate: (view: string, extraData?: any) => void;
@@ -14,8 +15,7 @@ export const InternalLinkBuilder: React.FC<InternalLinkBuilderProps> = ({ onNavi
 
   const fetchLinks = async () => {
     try {
-      const response = await fetch('/api/internal-links');
-      const json = await response.json();
+      const json = await apiClient.getInternalLinks();
       setLinks(json);
     } catch (err) {
       console.error(err);
@@ -30,11 +30,7 @@ export const InternalLinkBuilder: React.FC<InternalLinkBuilderProps> = ({ onNavi
 
   const handleApprove = async (id: string, newStatus: 'Approved' | 'Added' | 'Rejected') => {
     try {
-      await fetch(`/api/internal-links/${id}/approve`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
-      });
+      await apiClient.approveLink(id, newStatus);
       fetchLinks();
     } catch (err) {
       console.error(err);

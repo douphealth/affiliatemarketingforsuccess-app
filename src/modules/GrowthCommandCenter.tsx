@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ScoreGauge } from '../components/ScoreGauge';
 import type { Recommendation } from '../types';
 import { Play, Sparkles, Check, CheckCircle2, ChevronRight, HelpCircle, BookOpen } from 'lucide-react';
+import { apiClient } from '../apiClient';
 
 interface GrowthCommandCenterProps {
   onNavigate: (view: string, extraData?: any) => void;
@@ -17,8 +18,7 @@ export const GrowthCommandCenter: React.FC<GrowthCommandCenterProps> = ({ onNavi
 
   const fetchDashboardData = async () => {
     try {
-      const response = await fetch('/api/dashboard');
-      const json = await response.json();
+      const json = await apiClient.getDashboard();
       setData(json);
     } catch (err) {
       console.error("Error fetching dashboard:", err);
@@ -35,14 +35,7 @@ export const GrowthCommandCenter: React.FC<GrowthCommandCenterProps> = ({ onNavi
     if (!data?.url) return;
     setCrawling(true);
     try {
-      await fetch('/api/crawl', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          url: data.url,
-          simulate: crawlMode === 'simulate' 
-        })
-      });
+      await apiClient.triggerCrawl(data.url, crawlMode === 'simulate');
       // Poll dashboard stats after launch
       setTimeout(() => {
         fetchDashboardData();
@@ -57,8 +50,8 @@ export const GrowthCommandCenter: React.FC<GrowthCommandCenterProps> = ({ onNavi
   const approveRecommendation = async (rec: Recommendation) => {
     setApprovingId(rec.id);
     try {
-      // Simulate API sync by moving recommendation to task draft status
-      await fetch(`/api/internal-links`, { method: 'GET' }); // ping backend activity
+      // Simulate API sync by calling local db helper
+      await apiClient.getInternalLinks();
       
       // Let's create an activity log entry or just alert
       setTimeout(() => {

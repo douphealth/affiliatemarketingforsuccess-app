@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { TopicCluster } from '../types';
 import { GitPullRequest, LayoutGrid } from 'lucide-react';
+import { apiClient } from '../apiClient';
 
 export const TopicalAuthorityMapper: React.FC = () => {
   const [clusters, setClusters] = useState<TopicCluster[]>([]);
@@ -10,8 +11,7 @@ export const TopicalAuthorityMapper: React.FC = () => {
 
   const fetchClusters = async () => {
     try {
-      const response = await fetch('/api/clusters');
-      const json = await response.json();
+      const json = await apiClient.getClusters();
       setClusters(json.clusters);
       setNextActions(json.nextActions);
       if (json.clusters.length > 0) {

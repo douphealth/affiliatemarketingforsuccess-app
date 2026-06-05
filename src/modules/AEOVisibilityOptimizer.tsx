@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { Page } from '../types';
 import { ShieldAlert, Cpu, CheckCircle, FileText, Clipboard, Download } from 'lucide-react';
+import { apiClient } from '../apiClient';
 
 export const AEOVisibilityOptimizer: React.FC = () => {
   const [pages, setPages] = useState<Page[]>([]);
@@ -12,8 +13,7 @@ export const AEOVisibilityOptimizer: React.FC = () => {
 
   const fetchPages = async () => {
     try {
-      const response = await fetch('/api/pages');
-      const json = await response.json();
+      const json = await apiClient.getPages();
       setPages(json);
       if (json.length > 0) {
         setSelectedPage(json.find((p: any) => p.url.includes('ai-tools')) || json[0]);

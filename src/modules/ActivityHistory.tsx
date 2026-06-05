@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { ActivityLog } from '../types';
 import { Clock } from 'lucide-react';
+import { apiClient } from '../apiClient';
 
 export const ActivityHistory: React.FC = () => {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
@@ -8,8 +9,7 @@ export const ActivityHistory: React.FC = () => {
 
   const fetchLogs = async () => {
     try {
-      const response = await fetch('/api/logs');
-      const json = await response.json();
+      const json = await apiClient.getLogs();
       setLogs(json);
     } catch (err) {
       console.error(err);

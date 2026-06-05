@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { SEOIssue } from '../types';
 import { AlertCircle, Filter, RefreshCw, Search, ArrowRight } from 'lucide-react';
+import { apiClient } from '../apiClient';
 
 interface WordPressSiteAuditorProps {
   onNavigate: (view: string, extraData?: any) => void;
@@ -17,8 +18,7 @@ export const WordPressSiteAuditor: React.FC<WordPressSiteAuditorProps> = ({ onNa
 
   const fetchIssues = async () => {
     try {
-      const response = await fetch('/api/issues');
-      const json = await response.json();
+      const json = await apiClient.getIssues();
       setIssues(json);
     } catch (err) {
       console.error(err);
@@ -34,11 +34,9 @@ export const WordPressSiteAuditor: React.FC<WordPressSiteAuditorProps> = ({ onNa
   const triggerCrawl = async () => {
     setCrawling(true);
     try {
-      await fetch('/api/crawl', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ simulate: true })
-      });
+      const dash = await apiClient.getDashboard();
+      const targetUrl = dash.url || 'https://affiliatemarketingforsuccess.com/';
+      await apiClient.triggerCrawl(targetUrl, true);
       setTimeout(() => {
         fetchIssues();
         setCrawling(false);

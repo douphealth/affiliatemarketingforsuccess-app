@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { RewriteTask, ContentBrief } from '../types';
 import { TrendingDown, Sparkles, Edit3, ArrowRight, Clipboard, ShieldCheck } from 'lucide-react';
+import { apiClient } from '../apiClient';
 
 interface Top10RewritePrioritizerProps {
   onNavigate: (view: string, extraData?: any) => void;
@@ -16,8 +17,7 @@ export const Top10RewritePrioritizer: React.FC<Top10RewritePrioritizerProps> = (
 
   const fetchRewrites = async () => {
     try {
-      const response = await fetch('/api/rewrites');
-      const json = await response.json();
+      const json = await apiClient.getRewrites();
       setTasks(json);
     } catch (err) {
       console.error(err);
@@ -35,8 +35,7 @@ export const Top10RewritePrioritizer: React.FC<Top10RewritePrioritizerProps> = (
     setLoadingBrief(true);
     setActiveTab('meta');
     try {
-      const response = await fetch(`/api/rewrites/${task.page_id}/brief`);
-      const json = await response.json();
+      const json = await apiClient.getBrief(task.page_id);
       setBrief(json);
     } catch (err) {
       console.error(err);

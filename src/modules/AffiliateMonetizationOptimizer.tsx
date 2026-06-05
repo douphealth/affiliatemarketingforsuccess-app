@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ShieldCheck, DollarSign, Percent, AlertCircle } from 'lucide-react';
+import { apiClient } from '../apiClient';
 
 export const AffiliateMonetizationOptimizer: React.FC = () => {
   const [data, setData] = useState<any>(null);
@@ -8,8 +9,7 @@ export const AffiliateMonetizationOptimizer: React.FC = () => {
 
   const fetchMonetization = async () => {
     try {
-      const response = await fetch('/api/monetization');
-      const json = await response.json();
+      const json = await apiClient.getMonetization();
       setData(json);
       if (json.reviews.length > 0) {
         setSelectedReviewId(json.reviews[0].id);
