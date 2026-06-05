@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ScoreGauge } from '../components/ScoreGauge';
 import type { Recommendation } from '../types';
-import { Play, Sparkles, Check, CheckCircle2, ChevronRight, HelpCircle } from 'lucide-react';
+import { Play, Sparkles, Check, CheckCircle2, ChevronRight, HelpCircle, BookOpen } from 'lucide-react';
 
 interface GrowthCommandCenterProps {
   onNavigate: (view: string, extraData?: any) => void;
@@ -32,12 +32,16 @@ export const GrowthCommandCenter: React.FC<GrowthCommandCenterProps> = ({ onNavi
   }, []);
 
   const triggerCrawl = async () => {
+    if (!data?.url) return;
     setCrawling(true);
     try {
       await fetch('/api/crawl', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ simulate: crawlMode === 'simulate' })
+        body: JSON.stringify({ 
+          url: data.url,
+          simulate: crawlMode === 'simulate' 
+        })
       });
       // Poll dashboard stats after launch
       setTimeout(() => {
@@ -87,7 +91,7 @@ export const GrowthCommandCenter: React.FC<GrowthCommandCenterProps> = ({ onNavi
       <div className="section-header">
         <div>
           <h1>Growth Command Center</h1>
-          <p className="page-subtitle">Daily strategy and scores for <strong>affiliatemarketingforsuccess.com</strong></p>
+          <p className="page-subtitle">Daily strategy and scores for <strong>{data?.name || 'your domain'}</strong></p>
         </div>
         <div className="glass-card" style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', gap: '16px', margin: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -262,6 +266,14 @@ export const GrowthCommandCenter: React.FC<GrowthCommandCenterProps> = ({ onNavi
               <div>
                 <h4 style={{ color: 'var(--text-secondary)', marginBottom: '4px', fontSize: '13px' }}>Validation Method</h4>
                 <p style={{ fontSize: '13.5px' }}>{selectedRec.details_json.validation}</p>
+              </div>
+
+              {/* Contextual Affiliate Marketing for Success Masterclass Tutorial Guide Link */}
+              <div style={{ marginTop: '8px', background: 'rgba(168, 85, 247, 0.04)', padding: '14px', borderRadius: '8px', border: '1px solid rgba(168, 85, 247, 0.12)', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <BookOpen size={16} style={{ color: 'var(--accent-purple)', flexShrink: 0 }} />
+                <div style={{ fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+                  <strong>Need Help?</strong> Read the step-by-step masterclass tutorial on <a href="https://affiliatemarketingforsuccess.com/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-purple)', fontWeight: '700', textDecoration: 'underline' }}>Affiliate Marketing for Success</a> to implement this fix successfully.
+                </div>
               </div>
 
               <div style={{ display: 'flex', gap: '12px', marginTop: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>

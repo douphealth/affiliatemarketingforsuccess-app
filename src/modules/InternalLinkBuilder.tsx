@@ -137,11 +137,15 @@ export const InternalLinkBuilder: React.FC<InternalLinkBuilderProps> = ({ onNavi
                       <td style={{ width: '120px' }}>{getStatusBadge(link.status)}</td>
                       <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         <div style={{ fontWeight: '600' }}>{link.source_title}</div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{link.source_url?.replace('https://affiliatemarketingforsuccess.com', '')}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                          {link.source_url ? new URL(link.source_url).pathname : '/'}
+                        </div>
                       </td>
                       <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         <div style={{ fontWeight: '600', color: 'var(--accent-teal)' }}>{link.target_title}</div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{link.target_url?.replace('https://affiliatemarketingforsuccess.com', '')}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                          {link.target_url ? new URL(link.target_url).pathname : '/'}
+                        </div>
                       </td>
                       <td style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5', maxWidth: '350px' }}>
                         <div style={{ marginBottom: '6px' }}>{renderSentenceContext(link)}</div>

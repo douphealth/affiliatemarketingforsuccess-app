@@ -162,9 +162,15 @@ export const WordPressSiteAuditor: React.FC<WordPressSiteAuditorProps> = ({ onNa
                       <td style={{ fontWeight: '600', width: '180px', color: 'var(--text-primary)' }}>
                         {formatType(issue.issue_type)}
                       </td>
-                      <td style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        <span style={{ color: 'var(--text-muted)' }}>amfs/</span>
-                        {issue.page_url?.replace('https://affiliatemarketingforsuccess.com/', '') || '/'}
+                      <td style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={issue.page_url}>
+                        {issue.page_url ? (
+                          <>
+                            <span style={{ color: 'var(--text-muted)' }}>
+                              {new URL(issue.page_url).hostname.replace('www.', '')}
+                            </span>
+                            {new URL(issue.page_url).pathname}
+                          </>
+                        ) : '/'}
                       </td>
                       <td style={{ color: 'var(--text-secondary)' }}>{issue.details?.problem}</td>
                       <td style={{ width: '120px' }}>

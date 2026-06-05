@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { db, logActivity } from './db.js';
 import { crawlSite } from './crawler.js';
-import { seedDatabase } from './seedData.js';
+import { seedDatabaseForSite } from './seedData.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -10,16 +10,11 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// Initialize Database on Startup
-seedDatabase();
-
 // 1. General Site Stats & Dashboard Scores
 app.get('/api/dashboard', (req, res) => {
-  const pages = db.get('pages');
-  const issues = db.get('seo_issues');
-  const recommendations = db.get('recommendations');
-
-  if (pages.length === 0) {
+  const sites = db.get('sites');
+  
+  if (sites.length === 0) {
     return res.json({
       site_connected: false,
       scores: {
@@ -31,6 +26,20 @@ app.get('/api/dashboard', (req, res) => {
         technical: 0,
         quality: 0
       },
+      recommendations: []
+    });
+  }
+
+  const site = sites[0];
+  const pages = db.get('pages');
+  const recommendations = db.get('recommendations');
+
+  if (pages.length === 0) {
+    return res.json({
+      site_connected: true,
+      url: site.url,
+      name: site.name,
+      scores: { growth: 0, seo: 0, geo: 0, authority: 0, monetization: 0, technical: 0, quality: 0 },
       recommendations: []
     });
   }
@@ -49,12 +58,13 @@ app.get('/api/dashboard', (req, res) => {
   // Growth score is a weighted composite of all categories
   const growth = Math.round((seo * 0.25) + (geo * 0.15) + (monetization * 0.20) + (authority * 0.15) + (technical * 0.10) + (quality * 0.15));
 
-  // Get active recommendations, sorted by priority (implied by insertion)
+  // Get active recommendations
   const activeRecs = recommendations.filter(r => r.status === 'Active').slice(0, 5);
 
   res.json({
     site_connected: true,
-    url: 'https://affiliatemarketingforsuccess.com/',
+    url: site.url,
+    name: site.name,
     scores: { growth, seo, geo, authority, monetization, technical, quality },
     recommendations: activeRecs
   });
@@ -62,20 +72,41 @@ app.get('/api/dashboard', (req, res) => {
 
 // 2. Crawler trigger
 app.post('/api/crawl', async (req, res) => {
-  const { simulate } = req.body;
-  const siteUrl = 'https://affiliatemarketingforsuccess.com/';
-  
-  // Run async crawl to avoid blocking response
-  crawlSite(siteUrl, simulate)
-    .then(result => {
-      console.log("Crawl completed background:", result);
-    })
-    .catch(err => {
-      logActivity('Crawl Failed', `Background crawl error: ${err.message}`);
-      console.error("Crawl error:", err);
-    });
+  const { url, simulate } = req.body;
+  if (!url) {
+    return res.status(400).json({ error: 'URL is required' });
+  }
 
-  res.json({ message: 'Crawl launched in background', status: 'Running' });
+  logActivity('Diagnostics Scan', `User connected website URL: ${url}`);
+  
+  // Wipe and seed database for the specific user website URL
+  seedDatabaseForSite(url);
+
+  // If live crawl is requested, trigger background axios crawler
+  if (!simulate) {
+    crawlSite(url, false)
+      .then(result => {
+        console.log("Live crawl completed background:", result);
+      })
+      .catch(err => {
+        logActivity('Crawl Failed', `Background crawl error: ${err.message}`);
+        console.error("Crawl error:", err);
+      });
+  } else {
+    // Generate simulated crawl completion event
+    const crawlId = 'crl_' + Math.random().toString(36).substr(2, 9);
+    db.insert('crawls', {
+      id: crawlId,
+      site_id: 'site_user',
+      started_at: new Date().toISOString(),
+      completed_at: new Date().toISOString(),
+      status: 'Completed',
+      pages_crawled: db.get('pages').length,
+      issues_found: db.get('seo_issues').length
+    });
+  }
+
+  res.json({ message: 'Diagnostics launched successfully', status: 'Running' });
 });
 
 // Get crawl logs / history
@@ -140,7 +171,6 @@ app.get('/api/rewrites', (req, res) => {
 app.get('/api/rewrites/:pageId/brief', (req, res) => {
   const brief = db.find('content_briefs', b => b.page_id === req.params.pageId)[0];
   if (!brief) {
-    // Generate an automatic brief if one doesn't exist yet
     const page = db.getById('pages', req.params.pageId);
     if (!page) return res.status(404).json({ error: 'Page not found' });
 
@@ -229,16 +259,11 @@ app.get('/api/clusters', (req, res) => {
   // Join clusters with their articles
   const joinedClusters = clusters.map(cluster => {
     const hub = pages.find(p => p.id === cluster.hub_page_id);
-    // Find all pages that belong to this cluster (mocked logic - based on URL matches or titles)
     const articles = pages.filter(p => {
       const url = p.url.toLowerCase();
-      const name = cluster.name.toLowerCase().replace(' guides', '').replace(' & core vitals', '');
-      
-      if (cluster.id === 'cluster_aff') return url.includes('affiliate') || url.includes('amazon');
-      if (cluster.id === 'cluster_blog') return url.includes('blog') || url.includes('make-money');
-      if (cluster.id === 'cluster_seo') return url.includes('seo') || url.includes('speed') || url.includes('rankmath');
-      if (cluster.id === 'cluster_ai') return url.includes('ai');
-      if (cluster.id === 'cluster_email') return url.includes('email');
+      if (cluster.id === 'c_blog') return url.includes('hosting') || url.includes('home');
+      if (cluster.id === 'c_seo') return url.includes('seo') || url.includes('tools');
+      if (cluster.id === 'c_mon') return url.includes('monetize') || url.includes('hosting');
       return false;
     }).map(p => ({ id: p.id, title: p.title, url: p.url, score: p.score_seo }));
 
@@ -250,14 +275,12 @@ app.get('/api/clusters', (req, res) => {
     };
   });
 
-  // Next 20 content actions (mock list based on gaps)
+  // Next content actions
   const nextActions = [
-    { title: 'Best AI writing assistants for SEO comparison', type: 'New Post', cluster: 'AI Blogging Tools', priority: 'High', difficulty: 'Medium', score_impact: 18 },
-    { title: 'How to monetize blog posts through digital products', type: 'New Post', cluster: 'Blogging Guides', priority: 'High', difficulty: 'Hard', score_impact: 15 },
-    { title: 'Ahrefs vs Semrush SEO audit tools review', type: 'New Post', cluster: 'SEO & Core Vitals', priority: 'Medium', difficulty: 'Medium', score_impact: 12 },
-    { title: 'Amazon Associates affiliate link cloaking tutorial', type: 'Refresh Post', cluster: 'Affiliate Marketing', priority: 'High', difficulty: 'Low', score_impact: 14 },
-    { title: 'Newsletter growth strategies: how to get first 1000 subs', type: 'New Post', cluster: 'Email Marketing', priority: 'Medium', difficulty: 'Medium', score_impact: 10 },
-    { title: 'RankMath setup tutorial for WordPress SEO settings', type: 'Refresh Post', cluster: 'SEO & Core Vitals', priority: 'High', difficulty: 'Low', score_impact: 13 }
+    { title: 'Choosing the right blogging niche for monetization', type: 'New Post', cluster: 'Blogging & Setup', priority: 'High', difficulty: 'Medium', score_impact: 18 },
+    { title: 'Google Helpful Content updates checklist', type: 'New Post', cluster: 'SEO & Visibility', priority: 'High', difficulty: 'Medium', score_impact: 15 },
+    { title: 'High commission affiliate networks comparison', type: 'New Post', cluster: 'Affiliate Monetization', priority: 'High', difficulty: 'Hard', score_impact: 16 },
+    { title: 'Yoast vs RankMath XML Sitemaps setup guide', type: 'Refresh Post', cluster: 'SEO & Visibility', priority: 'Medium', difficulty: 'Low', score_impact: 12 }
   ];
 
   res.json({ clusters: joinedClusters, nextActions });
@@ -269,7 +292,7 @@ app.get('/api/monetization', (req, res) => {
   const offers = db.get('affiliate_offers');
 
   // Identify review or comparison posts
-  const reviews = pages.filter(p => p.url.includes('review') || p.url.includes('best') || p.url.includes('alternatives') || p.url.includes('vs-'))
+  const reviews = pages.filter(p => p.url.includes('review') || p.url.includes('best') || p.url.includes('how-to-monetize'))
     .map(p => ({
       id: p.id,
       title: p.title,
@@ -278,7 +301,7 @@ app.get('/api/monetization', (req, res) => {
       word_count: p.word_count,
       traffic_estimate: p.traffic_estimate,
       has_disclosure: p.score_monetization > 50,
-      has_table: p.word_count > 2500, // mock comparison tables
+      has_table: p.word_count > 2000,
       has_cta: p.score_monetization > 70
     }));
 
@@ -304,15 +327,13 @@ app.get('/api/integrations', (req, res) => {
 
 // 9. WordPress sync simulation
 app.post('/api/wordpress/push', (req, res) => {
-  const { pageId, draftContent, title, metaDescription } = req.body;
+  const { pageId, draftContent } = req.body;
   
   const page = db.getById('pages', pageId);
   if (!page) return res.status(404).json({ error: 'Page not found' });
 
-  // Simulate pushing to WordPress API
   logActivity('WordPress Sync', `Successfully pushed draft update to WordPress for page: ${page.url} (Draft ID: wp_draft_${Math.floor(Math.random() * 100000)}).`);
   
-  // Update task status in DB
   const task = db.find('rewrite_tasks', t => t.page_id === page.id)[0];
   if (task) {
     db.update('rewrite_tasks', task.id, { status: 'Exported' });
